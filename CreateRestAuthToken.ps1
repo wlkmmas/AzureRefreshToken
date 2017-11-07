@@ -16,6 +16,25 @@
     base site used to build this script https://blogs.technet.microsoft.com/ronba/2016/05/09/using-powershell-and-the-office-365-rest-api-with-oauth/ 
     the other side used to trouble shoot the script https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-code
 #>
+
+# User input needed here #
+#------------------------#
+# you need to fill out tokenxml, application_ID, key_secret, and reply_url
+# tokenxml is the path and name to where you want to store the login credentials
+$tokenxml = "c:\bob\authtoken.xml"
+# copy application_ID, key_secret, and reply_url from azure aplication registration
+# connect to azure application management here http://dev.office.com/app-registration
+Add-Type -AssemblyName System.Web
+$Application_id = "PUT STUFF HERE"
+$Key_secret = "PUT STUFF HERE"
+$Reply_Url = "https://localhost/"
+$loginUrl = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=code&redirect_uri=" + 
+            [System.Web.HttpUtility]::UrlEncode($reply_Url) + 
+            "&client_id=$Application_id" + 
+            "&prompt=login"
+#------------------------#
+# End of user input #
+
 #function to create a login window to validate your Oauth creds
 Function Show-OAuthWindow
 {
@@ -46,17 +65,6 @@ Function Show-OAuthWindow
     
     $output
 }
-# Create the first authorization request
-# you need to fill application_ID, key_secret, and reply_url
-
-Add-Type -AssemblyName System.Web
-$Application_id = "5f0267bc-5073-4f68-869e-ff259053ee52"
-$Key_secret = "3uGH5km9jFH50x0cvu6PUSg5owoIW1PDzxrPXtb9cu0="
-$Reply_Url = "https://localhost/"
-$loginUrl = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=code&redirect_uri=" + 
-            [System.Web.HttpUtility]::UrlEncode($reply_Url) + 
-            "&client_id=$Application_id" + 
-            "&prompt=login"
 
 #Open the login window for user input
 $queryOutput = Show-OAuthWindow -Url $loginUrl
@@ -76,6 +84,17 @@ $Authorization = Invoke-RestMethod   -Method Post `
                     -Uri https://login.microsoftonline.com/common/oauth2/token `
                     -Body $AuthorizationPostRequest
 
+if($configdata){
+}
+else {
+    $configdata_info = @{
+    "client_id" = $Application_id;
+    "client_secret" = $Key_secret;
+    "redirecturl" = $reply_Url;
+    "refresh_token" = $Authorization.refresh_token
+    }
+$configData = New-Object -TypeName PSObject -Property $configdata_info                   
+}
 # construct the xml file output to capture the refresh token to use later
 Add-Type -AssemblyName System.Web
 $configData.client_id = $Application_id
@@ -84,7 +103,7 @@ $configData.redirecturl = $reply_Url
 $configData.refresh_token= $Authorization.refresh_token
 
 # save the XML output with all of the tokens
-$configData | Export-Clixml $remailerxml                   
+$configData | Export-Clixml $tokenxml                   
 
 # check your mail to make sure everything is working.
 $mail = Invoke-RestMethod -Headers @{Authorization =("Bearer "+ $Authorization.access_token)} -Uri "https://outlook.office365.com/api/v2.0/me/messages" -Method Get
