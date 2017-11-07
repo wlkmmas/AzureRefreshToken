@@ -84,6 +84,7 @@ $Authorization = Invoke-RestMethod   -Method Post `
                     -Uri https://login.microsoftonline.com/common/oauth2/token `
                     -Body $AuthorizationPostRequest
 
+# on first run we need to create an object to store the auth token in
 if($configdata){
 }
 else {
@@ -95,6 +96,7 @@ else {
     }
 $configData = New-Object -TypeName PSObject -Property $configdata_info                   
 }
+
 # construct the xml file output to capture the refresh token to use later
 Add-Type -AssemblyName System.Web
 $configData.client_id = $Application_id
